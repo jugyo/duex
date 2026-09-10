@@ -18,6 +18,10 @@ export interface Logger {
   child(fields: Record<string, Json>): Logger;
 }
 
+export function shouldLog(level: LogLevel, minimum: LogLevel): boolean {
+  return LEVEL_ORDER[level] >= LEVEL_ORDER[minimum];
+}
+
 export interface JsonLoggerOptions {
   level?: LogLevel;
   /** Diagnostics always go to stderr so `--json` stdout stays machine-readable. */
@@ -40,7 +44,7 @@ export class JsonLogger implements Logger {
   }
 
   log(level: LogLevel, event: string, fields: Record<string, Json> = {}): void {
-    if (LEVEL_ORDER[level] < LEVEL_ORDER[this.#level]) return;
+    if (!shouldLog(level, this.#level)) return;
     const line = JSON.stringify({
       ts: new Date(this.#now()).toISOString(),
       level,

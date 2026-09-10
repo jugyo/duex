@@ -13,11 +13,83 @@ import { SerializationError, UsageError, serializeError, deserializeError, Termi
 import { plannedSlots, scheduleIdempotencyKey } from "../src/core/scheduler.ts";
 import { newInvocationId } from "../src/core/ids.ts";
 import { JsonLogger } from "../src/core/logger.ts";
+import { TextLogger } from "../src/core/text-logger.ts";
 
 describe("JsonLogger", () => {
   it("does not let a writer failure change the caller result", () => {
     const logger = new JsonLogger({ write: () => { throw new Error("broken output"); } });
     assert.doesNotThrow(() => logger.info("test.event", { ok: true }));
+  });
+});
+
+describe("TextLogger", () => {
+  const collect = (level: "debug" | "info" = "info") => {
+    const lines: string[] = [];
+    const logger = new TextLogger({ level, write: (line) => lines.push(line), now: () => Date.parse("2026-09-10T04:42:01.000Z") });
+    return { lines, logger };
+  };
+
+  it("prefixes every line with a clock and the plugin the line belongs to", () => {
+    const { lines, logger } = collect();
+    logger.child({ pluginId: "github.commits", invocationId: "01INVOCATION" })
+      .info("plugin.invocation_started", { kind: "source" });
+    assert.match(lines[0], /^\[\d{2}:\d{2}:\d{2}\] github\.commits source を開始しました（invocation=01INVOCATION）$/u);
+  });
+
+  it("reports counts, warnings and failure reasons in text", () => {
+    const { lines, logger } = collect();
+    const plugin = logger.child({ pluginId: "github.change-notification" });
+    plugin.info("consumer.events_processed", { events: 1 });
+    plugin.warn("consumer.event_failed", { eventId: "evt-1", eventType: "github.commit.created", attempt: 1, code: "PLUGIN_STEP_FAILED" });
+    plugin.error("plugin.invocation_failed", { kind: "event_consumer", code: "PLUGIN_STEP_FAILED" });
+    assert.deepEqual(lines.map((line) => line.slice(11)), [
+      "github.change-notification event を 1 件処理しました",
+      "警告: github.change-notification event の処理に失敗しました（event=evt-1、type=github.commit.created、attempt 1、code=PLUGIN_STEP_FAILED）",
+      "エラー: github.change-notification consumer が失敗しました（code=PLUGIN_STEP_FAILED）",
+    ]);
+  });
+
+  it("keeps detail events for --debug only", () => {
+    const { lines, logger } = collect();
+    logger.debug("source.page_completed", { page: 1, events: 3, insertedEvents: 3, hasMore: false, cursorUpdated: true });
+    assert.deepEqual(lines, []);
+    const debug = collect("debug");
+    debug.logger.child({ pluginId: "github.commits" })
+      .debug("source.page_completed", { page: 1, events: 3, insertedEvents: 3, hasMore: false, cursorUpdated: true });
+    assert.equal(debug.lines[0].slice(11), "github.commits page 1 を取得しました（event 3 件、保存 3 件、続きなし、cursor 更新）");
+  });
+
+  it("leaves the runtime echo of a plugin invocation to --debug", () => {
+    const { lines, logger } = collect();
+    const plugin = logger.child({ pluginId: "github.commits", workflow: "local-event-kit.source.poll" });
+    plugin.info("invocation.started", {});
+    plugin.info("tick.finished", { skipped: false, runs: 1, materialized: 1, recovered: 0, woken: 0 });
+    assert.deepEqual(lines, []);
+    const debug = collect("debug");
+    debug.logger.child({ pluginId: "github.commits", workflow: "local-event-kit.source.poll" }).info("invocation.started", {});
+    assert.equal(debug.lines.length, 1);
+  });
+
+  it("renders unknown events without leaking payloads or journal results", () => {
+    const { lines, logger } = collect();
+    logger.info("plugin.custom_event", { attempts: 2, ok: true, output: { bytes: 12, secret: "sentinel" }, note: null });
+    assert.equal(lines[0].slice(11), "plugin.custom_event（attempts=2、ok=true、note=null）");
+  });
+
+  it("collapses long free-form text onto one line", () => {
+    const { lines, logger } = collect();
+    logger.error("invocation.failed", {
+      workflow: "local-event-kit.source.poll", errorName: "Error", code: null,
+      message: `複数行の\n失敗理由${"あ".repeat(200)}`,
+    });
+    assert.equal(lines.length, 1);
+    assert.ok(lines[0].includes("複数行の 失敗理由"));
+    assert.ok(lines[0].endsWith("…）"));
+  });
+
+  it("does not let a writer failure change the caller result", () => {
+    const logger = new TextLogger({ write: () => { throw new Error("broken output"); } });
+    assert.doesNotThrow(() => logger.info("plugin.invocation_started", { kind: "source" }));
   });
 });
 

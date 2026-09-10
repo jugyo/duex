@@ -24,12 +24,15 @@ export {
   NonDeterministicWorkflowError,
   NotFoundError,
   SerializationError,
+  SuspendInvocation,
   TerminalError,
   UsageError,
 } from "./core/errors.ts";
 
 export { JsonLogger, silentLogger } from "./core/logger.ts";
 export type { LogLevel, Logger } from "./core/logger.ts";
+export { TextLogger, formatLogLine } from "./core/text-logger.ts";
+export type { TextLoggerOptions } from "./core/text-logger.ts";
 
 export { WorkflowRegistry } from "./core/registry.ts";
 export { ReplayContext, DEFAULT_RETRY } from "./core/replay-context.ts";
