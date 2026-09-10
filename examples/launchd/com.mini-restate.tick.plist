@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Runs `mini-restate tick` once a minute without any resident process.
+
+  1. Edit the two absolute paths below (node binary and project directory).
+  2. cp examples/launchd/com.mini-restate.tick.plist ~/Library/LaunchAgents/
+  3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mini-restate.tick.plist
+  4. launchctl kickstart -p gui/$(id -u)/com.mini-restate.tick   # run once now
+
+  Unload with:
+     launchctl bootout gui/$(id -u)/com.mini-restate.tick
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.mini-restate.tick</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/ABSOLUTE/PATH/TO/mini-restate/bin/mini-restate.mjs</string>
+    <string>tick</string>
+    <string>--max-runs</string>
+    <string>20</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/ABSOLUTE/PATH/TO/mini-restate</string>
+
+  <key>StartInterval</key>
+  <integer>60</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/ABSOLUTE/PATH/TO/mini-restate/.mini-restate/tick.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/ABSOLUTE/PATH/TO/mini-restate/.mini-restate/tick.err.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

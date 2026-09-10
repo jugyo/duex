@@ -1,0 +1,22 @@
+{
+  "name": "mini-restate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A tiny local-only durable workflow runtime backed by SQLite",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bin": {
+    "mini-restate": "./bin/mini-restate.mjs"
+  },
+  "scripts": {
+    "mini-restate": "node ./bin/mini-restate.mjs",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^24.0.0"
+  }
+}
