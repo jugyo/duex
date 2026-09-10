@@ -15,7 +15,7 @@ import { tempDir } from "./helpers.ts";
  */
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const BIN = join(ROOT, "bin", "mini-restate.mjs");
+const BIN = join(ROOT, "bin", "mini-restate.ts");
 const CONFIG = join(ROOT, "test", "fixtures", "crash-app", "mini-restate.config.ts");
 const LEASE_TTL_MS = 300;
 

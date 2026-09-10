@@ -17,6 +17,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "bin/**/*.ts",
     "test/**/*.ts",
     "mini-restate.config.ts"
   ]

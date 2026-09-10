@@ -7,11 +7,25 @@
   "engines": {
     "node": ">=24.0.0"
   },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "bin": {
-    "mini-restate": "./bin/mini-restate.mjs"
+    "mini-restate": "./dist/bin/mini-restate.js"
   },
   "scripts": {
-    "mini-restate": "node ./bin/mini-restate.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "mini-restate": "node ./bin/mini-restate.ts",
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

@@ -20,9 +20,9 @@ Requires Node.js 24+ (uses native TypeScript type stripping and `node:sqlite`).
 ## Quick start
 
 ```bash
-node bin/mini-restate.mjs init
-node bin/mini-restate.mjs invoke hello-workflow --input '{"name":"jugyo"}' --wait
-node bin/mini-restate.mjs journal show <INVOCATION_ID>
+node bin/mini-restate.ts init
+node bin/mini-restate.ts invoke hello-workflow --input '{"name":"jugyo"}' --wait
+node bin/mini-restate.ts journal show <INVOCATION_ID>
 ```
 
 ```
@@ -203,6 +203,58 @@ Guaranteed:
 dies after a side effect succeeds but before the journal commit, that step is
 retried. Derive an idempotency key from `ctx.invocationId` + step name and
 de-duplicate downstream.
+
+## Using mini-restate as a package
+
+配布されるのは `dist/` に出力されたコンパイル済みコードです。Node は `node_modules`
+配下の `.ts` を type stripping しないため、利用側が素の `node` で動く条件を満たすには
+`.js` と `.d.ts` を配布する必要があります。package 契約は次のとおりです。
+
+| Field | Value |
+|---|---|
+| `main` | `./dist/src/index.js` |
+| `types` | `./dist/src/index.d.ts` |
+| `exports["."]` | `types` → `./dist/src/index.d.ts`、`default` → `./dist/src/index.js` |
+| `bin.mini-restate` | `./dist/bin/mini-restate.js`（`bin/mini-restate.ts` の出力） |
+| `files` | `dist/`、`README.md` |
+
+```bash
+npm run build     # tsc -p tsconfig.build.json → dist/*.js, *.d.ts, *.map
+```
+
+`dist/` は git 管理外です。`prepack` が `npm pack` / `npm publish` の直前に build を
+実行するので、tarball には常に最新の `dist/` が入ります。
+
+### file: 依存で使う
+
+```jsonc
+// 利用側の package.json
+{ "dependencies": { "mini-restate": "file:../mini-restate" } }
+```
+
+`file:` 依存は symlink になるため、`prepack` は走りません。利用側で `npm install` する前に、
+mini-restate 側で一度 build しておいてください。
+
+```bash
+cd ../mini-restate && npm install && npm run build
+```
+
+`src/` を編集したら、利用側から見える内容を更新するために `npm run build` を再実行します。
+リポジトリ内での開発時は build 不要で、`npm run mini-restate`（`node ./bin/mini-restate.ts`）が
+`src/` の TypeScript を直接実行します。
+
+利用側からは package 名で import します。
+
+```ts
+import { defineWorkflow, defineConfig } from "mini-restate";
+```
+
+### npm registry 公開との境界
+
+`package.json` は `private: true` のままで、このリポジトリは registry へ publish しません。
+公開に進む場合に追加で必要なのは `private` の削除、`version` / `license` / `repository` の
+確定、そして publish 手順だけです。`main` / `types` / `exports` / `files` / `bin` / `prepack` は
+registry 経由の install でもそのまま通用するため、ここまでの package 契約は変更不要です。
 
 ## Layout
 

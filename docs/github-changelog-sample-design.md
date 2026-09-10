@@ -195,11 +195,11 @@ GitHub・Gemini・通知コマンドの一時失敗は `ctx.run` の retry を�
 node examples/github-changelog/setup.ts
 
 # 手動で定期処理を進める
-node bin/mini-restate.mjs --config examples/github-changelog/mini-restate.config.ts tick
+node bin/mini-restate.ts --config examples/github-changelog/mini-restate.config.ts tick
 
 # 実行状態とステップの記録を確認する
-node bin/mini-restate.mjs --config examples/github-changelog/mini-restate.config.ts invocations list
-node bin/mini-restate.mjs --config examples/github-changelog/mini-restate.config.ts journal show <ID>
+node bin/mini-restate.ts --config examples/github-changelog/mini-restate.config.ts invocations list
+node bin/mini-restate.ts --config examples/github-changelog/mini-restate.config.ts journal show <ID>
 ```
 
 setup は Source と Consumer のスケジュールを固定 ID・間隔1分・`catchUp: latest` で登録し、最初の tick から実行可能にする。setup の再実行では既存スケジュールを重複作成しない。サンプルの設定変更は初期版では再セットアップを前提とする。
