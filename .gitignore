@@ -2,6 +2,7 @@ node_modules/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+*.tgz
 .data/
 .mini-restate/
 .DS_Store

@@ -1,9 +1,17 @@
 {
   "name": "mini-restate",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "A tiny local-only durable workflow runtime backed by SQLite",
+  "license": "MIT",
+  "author": "Kaz <kkohno@gmail.com>",
+  "keywords": [
+    "workflow",
+    "durable",
+    "sqlite",
+    "local",
+    "restate"
+  ],
   "engines": {
     "node": ">=24.0.0"
   },
@@ -17,6 +25,7 @@
   },
   "files": [
     "dist/",
+    "LICENSE",
     "README.md"
   ],
   "bin": {

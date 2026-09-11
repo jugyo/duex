@@ -212,11 +212,13 @@ de-duplicate downstream.
 
 | Field | Value |
 |---|---|
+| `name` | `mini-restate` |
+| `license` | `MIT` |
 | `main` | `./dist/src/index.js` |
 | `types` | `./dist/src/index.d.ts` |
 | `exports["."]` | `types` → `./dist/src/index.d.ts`、`default` → `./dist/src/index.js` |
 | `bin.mini-restate` | `./dist/bin/mini-restate.js`（`bin/mini-restate.ts` の出力） |
-| `files` | `dist/`、`README.md` |
+| `files` | `dist/`、`LICENSE`、`README.md` |
 
 ```bash
 npm run build     # tsc -p tsconfig.build.json → dist/*.js, *.d.ts, *.map
@@ -249,12 +251,14 @@ cd ../mini-restate && npm install && npm run build
 import { defineWorkflow, defineConfig } from "mini-restate";
 ```
 
-### npm registry 公開との境界
+### npm pack / 公開準備
 
-`package.json` は `private: true` のままで、このリポジトリは registry へ publish しません。
-公開に進む場合に追加で必要なのは `private` の削除、`version` / `license` / `repository` の
-確定、そして publish 手順だけです。`main` / `types` / `exports` / `files` / `bin` / `prepack` は
-registry 経由の install でもそのまま通用するため、ここまでの package 契約は変更不要です。
+`private` は外してあり、`license` / `author` / `keywords` と `LICENSE` も揃えている。
+`npm pack`（`prepack` → build）で tarball を作れ、別ディレクトリへ install して
+ライブラリ import と CLI の両方を実行できる。実際の `npm publish`（レジストリへの本番公開）は
+このリポジトリの作業範囲外で、公開時に必要なのは `npm publish` の実行だけである。
+
+デモ用のルート `mini-restate.config.ts` や `src/` / `test/` / ローカル DB は `files` に含めていない。
 
 ## Layout
 
