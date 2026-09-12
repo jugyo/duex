@@ -5,18 +5,18 @@ import { defineWorkflow } from "../../../src/core/types.ts";
 import type { WorkflowContext } from "../../../src/core/types.ts";
 
 /**
- * Fixture app for the crash matrix. `MINI_RESTATE_CRASH_AT` selects a crash
+ * Fixture app for the crash matrix. `DUEX_CRASH_AT` selects a crash
  * point of the form `before:<step>` or `after:<step>`; the process is killed
  * with `process.exit` so nothing is flushed beyond what already reached SQLite.
  */
 
 function record(name: string): void {
-  const path = process.env.MINI_RESTATE_STEP_LOG;
+  const path = process.env.DUEX_STEP_LOG;
   if (path) appendFileSync(path, `${name}\n`, "utf8");
 }
 
 function maybeCrash(marker: string): void {
-  if (process.env.MINI_RESTATE_CRASH_AT === marker) process.exit(9);
+  if (process.env.DUEX_CRASH_AT === marker) process.exit(9);
 }
 
 async function step<T>(ctx: WorkflowContext, name: string, value: T): Promise<T> {
@@ -44,7 +44,7 @@ export const slowWorkflow = defineWorkflow({
   version: "1",
   async run(ctx: WorkflowContext) {
     return ctx.run("slow", async () => {
-      await delay(Number(process.env.MINI_RESTATE_SLOW_MS ?? 700));
+      await delay(Number(process.env.DUEX_SLOW_MS ?? 700));
       record("slow");
       return "done";
     });

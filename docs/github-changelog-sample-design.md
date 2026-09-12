@@ -4,15 +4,15 @@
 
 特定の GitHub リポジトリの `main` ブランチを監視し、変更をイベントとして SQLite に記録する。Consumer はそのイベントを読み、Gemini で変更を短くサマライズして macOS の通知で知らせる。チェンジログファイルへの追記は行わない。
 
-mini-restate を使って「収集 → イベント保存 → Consumer の処理」が動くことと、定期実行・journal・再試行の使用感を確認するための最小サンプルとする。この文書は実装予定の設計であり、アプリはまだ実装していない。
+duex を使って「収集 → イベント保存 → Consumer の処理」が動くことと、定期実行・journal・再試行の使用感を確認するための最小サンプルとする。この文書は実装予定の設計であり、アプリはまだ実装していない。
 
 ## 今回の範囲
 
 - 対象は設定した1リポジトリの `main` のみ。
 - Source は先端 SHA の変化を検出する。本文・コミットメッセージ・差分は取得しない。
 - Consumer が必要なコミット情報を取得し、Gemini で要約して macOS 通知を出す。
-- 同じマシンで `mini-restate tick` を定期起動する。
-- アプリ DB と mini-restate の DB は別ファイル・別接続・別スキーマとする。
+- 同じマシンで `duex tick` を定期起動する。
+- アプリ DB と duex の DB は別ファイル・別接続・別スキーマとする。
 
 PR・Issue・コメントなどの網羅的なイベント収集、汎用プラグイン機構、複数 Consumer、Web UI は今回実装しない。まず2つの workflow を直接登録する。
 
@@ -22,7 +22,7 @@ PR・Issue・コメントなどの網羅的なイベント収集、汎用プラ�
 launchd / 手動
       │
       ▼
-mini-restate tick ─────────────────────── state.sqlite
+duex tick ─────────────────────── state.sqlite
       │                                  スケジュール・実行・journal
       ├─ github-main-source
       │    GitHub から main の先端 SHA を取得
@@ -49,7 +49,7 @@ Source と Consumer はそれぞれ独立した定期 workflow とする。Sourc
 ```text
 examples/github-changelog/
   README.md
-  mini-restate.config.ts   # 2つの workflow を登録
+  duex.config.ts   # 2つの workflow を登録
   config.ts               # リポジトリ・Gemini 設定など
   config.local.ts         # 任意のローカル設定、Git 管理対象外
   setup.ts                # アプリ DB 初期化・定期実行の登録
@@ -172,7 +172,7 @@ Node.js の execFile から osascript を呼び出す。AppleScript 本体は固
 | events | seq（連番）、id（一意）、type、repository、branch、before_sha、after_sha、observed_at |
 | processed_events | event_id（主キー）、processed_at |
 
-mini-restate の DB は mini-restate だけが操作する。アプリはその内部テーブルを参照しない。複数 Consumer を扱う将来の設計では処理済み記録に Consumer ID を追加するが、サンプルでは不要。
+duex の DB は duex だけが操作する。アプリはその内部テーブルを参照しない。複数 Consumer を扱う将来の設計では処理済み記録に Consumer ID を追加するが、サンプルでは不要。
 
 ## 通知と再試行
 
@@ -182,7 +182,7 @@ mini-restate の DB は mini-restate だけが操作する。アプリはその�
 
 GitHub・Gemini・通知コマンドの一時失敗は `ctx.run` の retry を使う。同じ invocation の再開では、完了済みの取得・要約結果を journal から再利用する。API 応答後・journal 確定前のクラッシュでは Gemini 呼び出しも再実行され得る。
 
-定期 Consumer が別 invocation として同じ未処理イベントを拾う場合、取得・要約が重複することは許容する。通知ステップの処理済み確認で通常の二重通知を防ぐ。これは mini-restate の同じ runner による逐次実行を前提とする。イベントの厳密な完了順は保証しない。
+定期 Consumer が別 invocation として同じ未処理イベントを拾う場合、取得・要約が重複することは許容する。通知ステップの処理済み確認で通常の二重通知を防ぐ。これは duex の同じ runner による逐次実行を前提とする。イベントの厳密な完了順は保証しない。
 
 リトライ上限後は invocation が failed になり、イベントは未処理のまま残る。次の定期 Consumer でも再度対象になる。認証不備など継続する失敗はログ・invocation の状態から確認する。
 
@@ -195,11 +195,11 @@ GitHub・Gemini・通知コマンドの一時失敗は `ctx.run` の retry を�
 node examples/github-changelog/setup.ts
 
 # 手動で定期処理を進める
-node bin/mini-restate.ts --config examples/github-changelog/mini-restate.config.ts tick
+node bin/duex.ts --config examples/github-changelog/duex.config.ts tick
 
 # 実行状態とステップの記録を確認する
-node bin/mini-restate.ts --config examples/github-changelog/mini-restate.config.ts invocations list
-node bin/mini-restate.ts --config examples/github-changelog/mini-restate.config.ts journal show <ID>
+node bin/duex.ts --config examples/github-changelog/duex.config.ts invocations list
+node bin/duex.ts --config examples/github-changelog/duex.config.ts journal show <ID>
 ```
 
 setup は Source と Consumer のスケジュールを固定 ID・間隔1分・`catchUp: latest` で登録し、最初の tick から実行可能にする。setup の再実行では既存スケジュールを重複作成しない。サンプルの設定変更は初期版では再セットアップを前提とする。

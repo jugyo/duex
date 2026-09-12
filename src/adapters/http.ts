@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { MiniRestateError, UsageError } from "../core/errors.ts";
+import { DuexError, UsageError } from "../core/errors.ts";
 import { MAX_PAYLOAD_BYTES } from "../core/json.ts";
 import { silentLogger } from "../core/logger.ts";
 import { invocationView, journalView, scheduleView } from "../core/views.ts";
@@ -120,7 +120,7 @@ export async function startHttpServer(
     logger.warn("http.public_bind", {
       host,
       message:
-        "mini-restate has no authentication; binding beyond loopback exposes " +
+        "duex has no authentication; binding beyond loopback exposes " +
         "arbitrary workflow execution",
     });
   }
@@ -383,7 +383,7 @@ function matchRoute(
 }
 
 export function errorResponse(error: unknown): { status: number; body: Json } {
-  if (error instanceof MiniRestateError) {
+  if (error instanceof DuexError) {
     return {
       status: STATUS_BY_CODE[error.code] ?? 500,
       body: {

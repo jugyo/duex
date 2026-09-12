@@ -3,7 +3,7 @@ import { fishingAdvisor } from "./src/workflows/fishing-advisor.ts";
 import { helloWorkflow } from "./src/workflows/hello.ts";
 
 export default defineConfig({
-  dbPath: ".mini-restate/state.sqlite",
+  dbPath: ".duex/state.sqlite",
   workflows: [helloWorkflow, fishingAdvisor],
   http: {
     host: "127.0.0.1",

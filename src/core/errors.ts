@@ -14,7 +14,7 @@ export const ExitCode = {
 
 export type ExitCodeValue = (typeof ExitCode)[keyof typeof ExitCode];
 
-export class MiniRestateError extends Error {
+export class DuexError extends Error {
   readonly code: string;
   readonly exitCode: ExitCodeValue;
   readonly detail: Json | undefined;
@@ -30,34 +30,34 @@ export class MiniRestateError extends Error {
   ) {
     super(message, options.cause === undefined ? {} : { cause: options.cause });
     this.name = new.target.name;
-    this.code = options.code ?? "MINI_RESTATE_ERROR";
+    this.code = options.code ?? "DUEX_ERROR";
     this.exitCode = options.exitCode ?? ExitCode.INTERNAL;
     this.detail = options.detail;
   }
 }
 
 /** Bad CLI/HTTP input. */
-export class UsageError extends MiniRestateError {
+export class UsageError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, { code: "USAGE", exitCode: ExitCode.USAGE, detail });
   }
 }
 
 /** Config, registry or workflow-version problems. */
-export class ConfigError extends MiniRestateError {
+export class ConfigError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, { code: "CONFIG", exitCode: ExitCode.CONFIG, detail });
   }
 }
 
 /** The requested transition is not legal from the current status. */
-export class ConflictError extends MiniRestateError {
+export class ConflictError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, { code: "CONFLICT", exitCode: ExitCode.USAGE, detail });
   }
 }
 
-export class NotFoundError extends MiniRestateError {
+export class NotFoundError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, { code: "NOT_FOUND", exitCode: ExitCode.USAGE, detail });
   }
@@ -67,7 +67,7 @@ export class NotFoundError extends MiniRestateError {
  * Thrown by workflow code to fail an invocation immediately, without consuming
  * further retry attempts.
  */
-export class TerminalError extends MiniRestateError {
+export class TerminalError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, {
       code: "TERMINAL",
@@ -81,7 +81,7 @@ export class TerminalError extends MiniRestateError {
  * The journal no longer matches the code: an operation was inserted, removed or
  * reordered, or two durable operations ran concurrently.
  */
-export class NonDeterministicWorkflowError extends MiniRestateError {
+export class NonDeterministicWorkflowError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, {
       code: "NON_DETERMINISTIC",
@@ -92,14 +92,14 @@ export class NonDeterministicWorkflowError extends MiniRestateError {
 }
 
 /** A value that cannot cross the durability boundary. */
-export class SerializationError extends MiniRestateError {
+export class SerializationError extends DuexError {
   constructor(message: string, detail?: Json) {
     super(message, { code: "SERIALIZATION", exitCode: ExitCode.CONFIG, detail });
   }
 }
 
 /** Raised at an operation boundary when the invocation was cancelled. */
-export class InvocationCancelledError extends MiniRestateError {
+export class InvocationCancelledError extends DuexError {
   constructor(invocationId: string) {
     super(`invocation ${invocationId} was cancelled`, {
       code: "CANCELLED",
@@ -141,7 +141,7 @@ export function isTerminalError(error: unknown): boolean {
 
 /** Convert a thrown value into the JSON shape stored in `error_json`. */
 export function serializeError(error: unknown): SerializedError {
-  if (error instanceof MiniRestateError) {
+  if (error instanceof DuexError) {
     const serialized: SerializedError = {
       name: error.name,
       message: error.message,
@@ -172,7 +172,7 @@ export function serializeError(error: unknown): SerializedError {
 export function deserializeError(serialized: SerializedError): Error {
   const error = serialized.terminal
     ? new TerminalError(serialized.message, serialized.detail)
-    : new MiniRestateError(serialized.message, {
+    : new DuexError(serialized.message, {
         code: serialized.code,
         detail: serialized.detail,
       });
@@ -182,6 +182,6 @@ export function deserializeError(serialized: SerializedError): Error {
 }
 
 export function exitCodeOf(error: unknown): ExitCodeValue {
-  if (error instanceof MiniRestateError) return error.exitCode;
+  if (error instanceof DuexError) return error.exitCode;
   return ExitCode.INTERNAL;
 }

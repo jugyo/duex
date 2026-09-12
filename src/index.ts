@@ -20,7 +20,7 @@ export {
   ConfigError,
   ConflictError,
   ExitCode,
-  MiniRestateError,
+  DuexError,
   NonDeterministicWorkflowError,
   NotFoundError,
   SerializationError,
@@ -63,7 +63,7 @@ export {
   loadConfig,
   DEFAULT_DB_PATH,
 } from "./config.ts";
-export type { MiniRestateConfig, LoadedConfig } from "./config.ts";
+export type { DuexConfig, LoadedConfig } from "./config.ts";
 
 export { runCli } from "./adapters/cli.ts";
 export { createHttpServer, startHttpServer } from "./adapters/http.ts";

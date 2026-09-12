@@ -10,7 +10,7 @@ import { SqliteStore } from "./storage/sqlite-store.ts";
 import type { LogLevel, Logger } from "./core/logger.ts";
 import type { RetryPolicy, WorkflowDefinition } from "./core/types.ts";
 
-export interface MiniRestateConfig {
+export interface DuexConfig {
   /** SQLite file, resolved relative to the config file. */
   dbPath?: string;
   workflows: WorkflowDefinition[];
@@ -28,21 +28,21 @@ export interface MiniRestateConfig {
   logLevel?: LogLevel;
 }
 
-export function defineConfig(config: MiniRestateConfig): MiniRestateConfig {
+export function defineConfig(config: DuexConfig): DuexConfig {
   return config;
 }
 
-export const DEFAULT_DB_PATH = ".mini-restate/state.sqlite";
+export const DEFAULT_DB_PATH = ".duex/state.sqlite";
 
 export const CONFIG_FILENAMES = [
-  "mini-restate.config.ts",
-  "mini-restate.config.mts",
-  "mini-restate.config.js",
-  "mini-restate.config.mjs",
+  "duex.config.ts",
+  "duex.config.mts",
+  "duex.config.js",
+  "duex.config.mjs",
 ];
 
 export interface LoadedConfig {
-  config: MiniRestateConfig;
+  config: DuexConfig;
   configPath: string;
   dbPath: string;
 }
@@ -95,8 +95,8 @@ export async function loadConfig(options: {
 
   const exported = module.default ?? module.config;
   const config = (typeof exported === "function"
-    ? await (exported as () => MiniRestateConfig | Promise<MiniRestateConfig>)()
-    : exported) as MiniRestateConfig | undefined;
+    ? await (exported as () => DuexConfig | Promise<DuexConfig>)()
+    : exported) as DuexConfig | undefined;
 
   if (!config || typeof config !== "object") {
     throw new ConfigError(

@@ -1,4 +1,4 @@
-# mini-restate
+# duex
 
 A small durable workflow runtime for TypeScript. Workflows are plain
 `async` functions; SQLite is the single source of truth for execution state.
@@ -6,7 +6,7 @@ A small durable workflow runtime for TypeScript. Workflows are plain
 Restate's core idea — replay a handler from the top and serve completed
 operations from a journal — without a server, cluster, or deployment story.
 
-- **No resident process required.** `launchd → mini-restate tick` drains due work.
+- **No resident process required.** `launchd → duex tick` drains due work.
 - **CLI and HTTP are equal front doors** over the same `RuntimeApi`.
 - **One file to back up:** `state.sqlite` holds every invocation, journal, timer, and schedule.
 - **Zero runtime dependencies.** Uses `node:sqlite`, `node:http`, and `node:test`.
@@ -16,9 +16,9 @@ Requires **Node.js 24+** (native TypeScript type stripping and `node:sqlite`).
 ## Quick start
 
 ```bash
-node bin/mini-restate.ts init
-node bin/mini-restate.ts invoke hello-workflow --input '{"name":"jugyo"}' --wait
-node bin/mini-restate.ts journal show <INVOCATION_ID>
+node bin/duex.ts init
+node bin/duex.ts invoke hello-workflow --input '{"name":"jugyo"}' --wait
+node bin/duex.ts journal show <INVOCATION_ID>
 ```
 
 ## Writing a workflow
@@ -43,13 +43,13 @@ export const fishingAdvisor = defineWorkflow({
 });
 ```
 
-Register workflows in `mini-restate.config.ts`:
+Register workflows in `duex.config.ts`:
 
 ```ts
 import { defineConfig } from "./src/config.ts";
 
 export default defineConfig({
-  dbPath: ".mini-restate/state.sqlite",
+  dbPath: ".duex/state.sqlite",
   workflows: [helloWorkflow, fishingAdvisor],
   http: { host: "127.0.0.1", port: 8080, pollIntervalMs: 1000 },
   runner: { leaseTtlMs: 60_000, maxRuns: 20 },
@@ -70,12 +70,12 @@ Changing steps of a released workflow means bumping `version`.
 ## CLI
 
 ```bash
-mini-restate init
-mini-restate invoke <workflow> --input '{"a":1}' --wait
-mini-restate tick --max-runs 20
-mini-restate journal show <id>
-mini-restate schedules create hourly-job --workflow fishing-advisor --every 1h
-mini-restate serve --host 127.0.0.1 --port 8080
+duex init
+duex invoke <workflow> --input '{"a":1}' --wait
+duex tick --max-runs 20
+duex journal show <id>
+duex schedules create hourly-job --workflow fishing-advisor --every 1h
+duex serve --host 127.0.0.1 --port 8080
 ```
 
 Also: `workflows list`, `invocations list|show|retry|cancel`, `schedules list|show|enable|disable|delete`,
@@ -83,7 +83,7 @@ Also: `workflows list`, `invocations list|show|retry|cancel`, `schedules list|sh
 
 ## HTTP
 
-`mini-restate serve` exposes the same use cases and runs its own runner loop.
+`duex serve` exposes the same use cases and runs its own runner loop.
 It binds to `127.0.0.1` by default and has **no authentication** — do not expose it.
 
 ```bash
@@ -99,12 +99,12 @@ CLI and HTTP return the same view objects for a given record.
 ## Running without a resident process
 
 ```
-launchd ── every 60s ──► mini-restate tick --max-runs 20
+launchd ── every 60s ──► duex tick --max-runs 20
 ```
 
 Each tick acquires the runner lease, materializes due schedules, recovers orphans,
 wakes timers, runs pending work, then exits. See
-[`examples/launchd/com.mini-restate.tick.plist`](examples/launchd/com.mini-restate.tick.plist).
+[`examples/launchd/com.duex.tick.plist`](examples/launchd/com.duex.tick.plist).
 While the machine sleeps nothing runs; the first tick after wake applies the
 schedule's catch-up policy (`latest` by default, or `all` / `skip`).
 
@@ -126,12 +126,12 @@ The published package ships compiled `dist/` (`.js` + `.d.ts`). Build with
 `npm run build` (`prepack` runs this before `npm pack` / `npm publish`).
 
 ```ts
-import { defineWorkflow, defineConfig } from "mini-restate";
+import { defineWorkflow, defineConfig } from "@jugyo/duex";
 ```
 
 For a `file:` dependency, build this repo first (`npm install && npm run build`)
 so the symlink points at a populated `dist/`. In-repo development can run TypeScript
-directly via `npm run mini-restate` (`node ./bin/mini-restate.ts`).
+directly via `npm run duex` (`node ./bin/duex.ts`).
 
 ## Develop
 

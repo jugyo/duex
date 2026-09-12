@@ -15,8 +15,8 @@ import { tempDir } from "./helpers.ts";
  */
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const BIN = join(ROOT, "bin", "mini-restate.ts");
-const CONFIG = join(ROOT, "test", "fixtures", "crash-app", "mini-restate.config.ts");
+const BIN = join(ROOT, "bin", "duex.ts");
+const CONFIG = join(ROOT, "test", "fixtures", "crash-app", "duex.config.ts");
 const LEASE_TTL_MS = 300;
 
 interface CliResult {
@@ -37,7 +37,7 @@ function cli(
       cwd: ROOT,
       env: {
         ...process.env,
-        MINI_RESTATE_LEASE_TTL_MS: String(LEASE_TTL_MS),
+        DUEX_LEASE_TTL_MS: String(LEASE_TTL_MS),
         ...(options.env ?? {}),
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -93,7 +93,7 @@ async function setup(t: { after: (fn: () => void) => void }): Promise<{
 
   const invoke = await cli(
     ["invoke", "crash-workflow", "--detach", "--json"],
-    { dbPath, env: { MINI_RESTATE_STEP_LOG: logPath } },
+    { dbPath, env: { DUEX_STEP_LOG: logPath } },
   );
   assert.equal(invoke.code, 0, invoke.stderr);
   const { id } = invoke.json<{ id: string }>();
@@ -107,7 +107,7 @@ describe("crash recovery", () => {
     // Crash point: side effect done, journal `completed` not yet written.
     const crashed = await cli(["tick", "--max-runs", "1"], {
       dbPath,
-      env: { MINI_RESTATE_STEP_LOG: logPath, MINI_RESTATE_CRASH_AT: "after:step-two" },
+      env: { DUEX_STEP_LOG: logPath, DUEX_CRASH_AT: "after:step-two" },
     });
     assert.equal(crashed.code, 9, "the fixture must kill the process");
     assert.deepEqual(steps(logPath), ["step-one", "step-two"]);
@@ -127,7 +127,7 @@ describe("crash recovery", () => {
     await delay(LEASE_TTL_MS + 100);
     const recovered = await cli(["tick", "--max-runs", "1", "--json"], {
       dbPath,
-      env: { MINI_RESTATE_STEP_LOG: logPath },
+      env: { DUEX_STEP_LOG: logPath },
     });
     assert.equal(recovered.code, 0, recovered.stderr);
     const summary = recovered.json<{ recovered: number; runs: { outcome: string }[] }>();
@@ -150,7 +150,7 @@ describe("crash recovery", () => {
 
     const crashed = await cli(["tick", "--max-runs", "1"], {
       dbPath,
-      env: { MINI_RESTATE_STEP_LOG: logPath, MINI_RESTATE_CRASH_AT: "before:step-two" },
+      env: { DUEX_STEP_LOG: logPath, DUEX_CRASH_AT: "before:step-two" },
     });
     assert.equal(crashed.code, 9);
     assert.deepEqual(steps(logPath), ["step-one"]);
@@ -158,7 +158,7 @@ describe("crash recovery", () => {
     await delay(LEASE_TTL_MS + 100);
     const recovered = await cli(["tick", "--max-runs", "1", "--json"], {
       dbPath,
-      env: { MINI_RESTATE_STEP_LOG: logPath },
+      env: { DUEX_STEP_LOG: logPath },
     });
     assert.equal(recovered.code, 0, recovered.stderr);
     assert.deepEqual(steps(logPath), ["step-one", "step-two", "step-three"]);
@@ -173,7 +173,7 @@ describe("crash recovery", () => {
 
     const tick = await cli(["tick", "--max-runs", "1", "--json"], {
       dbPath,
-      env: { MINI_RESTATE_STEP_LOG: logPath },
+      env: { DUEX_STEP_LOG: logPath },
     });
     assert.equal(tick.code, 0, tick.stderr);
     assert.deepEqual(steps(logPath), ["step-one", "step-two", "step-three"]);
@@ -183,7 +183,7 @@ describe("crash recovery", () => {
     const directory = tempDir(t);
     const dbPath = join(directory, "state.sqlite");
     const logPath = join(directory, "steps.log");
-    const env = { MINI_RESTATE_STEP_LOG: logPath, MINI_RESTATE_SLOW_MS: "700" };
+    const env = { DUEX_STEP_LOG: logPath, DUEX_SLOW_MS: "700" };
 
     assert.equal((await cli(["init"], { dbPath })).code, 0);
     for (let index = 0; index < 2; index += 1) {

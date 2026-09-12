@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import { formatDuration, parseDuration } from "../core/duration.ts";
 import {
   ExitCode,
-  MiniRestateError,
+  DuexError,
   UsageError,
   exitCodeOf,
 } from "../core/errors.ts";
@@ -70,9 +70,9 @@ type CliValues = Record<string, string | string[] | boolean | undefined>;
 
 const VERSION = "0.1.0";
 
-const USAGE = `mini-restate ${VERSION} — a local durable workflow runtime
+const USAGE = `duex ${VERSION} — a local durable workflow runtime
 
-Usage: mini-restate <command> [options]
+Usage: duex <command> [options]
 
 Commands
   init                            create the database and run migrations
@@ -94,7 +94,7 @@ Commands
   export                          dump invocations and journals as JSON
 
 Global options
-  -c, --config <path>   config file (default: nearest mini-restate.config.ts)
+  -c, --config <path>   config file (default: nearest duex.config.ts)
       --db <path>       override the SQLite file
       --json            machine-readable output on stdout
       --log-level <l>   debug | info | warn | error
@@ -102,13 +102,13 @@ Global options
   -h, --help            show this help
 
 Examples
-  mini-restate invoke fishing-advisor --input @input.json --wait
-  mini-restate invoke fishing-advisor --input '{"location":"Hakata Bay"}' \\
+  duex invoke fishing-advisor --input @input.json --wait
+  duex invoke fishing-advisor --input '{"location":"Hakata Bay"}' \\
     --idempotency-key fishing-2026-08-31T10 --detach
-  mini-restate tick --max-runs 20
-  mini-restate schedules create hourly-fishing-advisor --workflow fishing-advisor \\
+  duex tick --max-runs 20
+  duex schedules create hourly-fishing-advisor --workflow fishing-advisor \\
     --every 1h --input @config/fishing-input.json --catch-up latest
-  mini-restate serve --host 127.0.0.1 --port 8080
+  duex serve --host 127.0.0.1 --port 8080
 
 Exit codes
   0 success (also: enqueued, or another runner is active)
@@ -279,7 +279,7 @@ async function commandInvoke(
       }
       if (view.error) {
         lines.push(`error:    ${formatError(view.error)}`);
-        lines.push(`          run \`mini-restate journal show ${view.id}\` for details`);
+        lines.push(`          run \`duex journal show ${view.id}\` for details`);
       }
       if (view.status === "sleeping" || view.status === "retry_wait") {
         lines.push(`due at:   ${view.availableAt}`);
@@ -599,12 +599,12 @@ async function commandServe(values: CliValues, io: CliIo): Promise<ExitCodeValue
 
   if (host === "0.0.0.0" || host === "::") {
     io.stderr(
-      `warning: binding to ${host} exposes mini-restate to the network and ` +
+      `warning: binding to ${host} exposes duex to the network and ` +
         `there is no authentication\n`,
     );
   }
   io.stderr(
-    `mini-restate serving on ${started.url} (db ${loaded.dbPath}, ` +
+    `duex serving on ${started.url} (db ${loaded.dbPath}, ` +
       `runner poll ${pollIntervalMs === 0 ? "off" : formatDuration(pollIntervalMs)})\n`,
   );
 
@@ -652,7 +652,7 @@ function reportError(error: unknown, values: CliValues, io: CliIo): ExitCodeValu
   const code = exitCodeOf(error);
   if (values.json === true) {
     const detail =
-      error instanceof MiniRestateError
+      error instanceof DuexError
         ? { code: error.code, message: error.message, detail: error.detail ?? null }
         : {
             code: "INTERNAL",
@@ -662,7 +662,7 @@ function reportError(error: unknown, values: CliValues, io: CliIo): ExitCodeValu
     io.stdout(`${JSON.stringify({ error: detail })}\n`);
   } else {
     io.stderr(`error: ${error instanceof Error ? error.message : String(error)}\n`);
-    if (!(error instanceof MiniRestateError) && error instanceof Error && error.stack) {
+    if (!(error instanceof DuexError) && error instanceof Error && error.stack) {
       io.stderr(`${error.stack}\n`);
     }
   }

@@ -1,5 +1,5 @@
 /**
- * Shared types for the mini-restate runtime core.
+ * Shared types for the duex runtime core.
  *
  * Everything crossing the durability boundary (workflow input, step output,
  * error detail) must be representable as `Json`.

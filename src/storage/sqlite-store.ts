@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import { decodePayload, encodePayload } from "../core/json.ts";
-import { MiniRestateError } from "../core/errors.ts";
+import { DuexError } from "../core/errors.ts";
 import type {
   CatchUpPolicy,
   InvocationRecord,
@@ -139,9 +139,9 @@ export class SqliteStore implements Store {
   migrate(): void {
     const current = this.schemaVersion();
     if (current > LATEST_SCHEMA_VERSION) {
-      throw new MiniRestateError(
+      throw new DuexError(
         `database schema version ${current} is newer than this build supports ` +
-          `(${LATEST_SCHEMA_VERSION}); upgrade mini-restate`,
+          `(${LATEST_SCHEMA_VERSION}); upgrade duex`,
         { code: "SCHEMA_TOO_NEW", exitCode: 4 },
       );
     }
@@ -154,7 +154,7 @@ export class SqliteStore implements Store {
         this.#db.exec("COMMIT");
       } catch (error) {
         this.#db.exec("ROLLBACK");
-        throw new MiniRestateError(
+        throw new DuexError(
           `migration ${migration.version} (${migration.name}) failed: ${
             error instanceof Error ? error.message : String(error)
           }`,

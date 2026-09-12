@@ -54,7 +54,7 @@ const DEFAULTS = {
   latitude: 33.6,
   longitude: 130.35,
   timezone: "Asia/Tokyo",
-  outboxPath: ".mini-restate/fishing-outbox.jsonl",
+  outboxPath: ".duex/fishing-outbox.jsonl",
 };
 
 interface ResolvedConfig {

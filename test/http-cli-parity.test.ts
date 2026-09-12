@@ -19,7 +19,7 @@ import type { StartedHttpServer } from "../src/adapters/http.ts";
  */
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const CONFIG = join(ROOT, "mini-restate.config.ts");
+const CONFIG = join(ROOT, "duex.config.ts");
 
 let directory: string;
 let dbPath: string;
@@ -27,7 +27,7 @@ let runtime: RuntimeApi;
 let server: StartedHttpServer;
 
 before(async () => {
-  directory = mkdtempSync(join(tmpdir(), "mini-restate-parity-"));
+  directory = mkdtempSync(join(tmpdir(), "duex-parity-"));
   dbPath = join(directory, "state.sqlite");
   const loaded = await loadConfig({ path: CONFIG, dbPath });
   runtime = createRuntime(loaded, { logger: silentLogger });

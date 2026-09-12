@@ -1,16 +1,16 @@
 {
-  "name": "mini-restate",
+  "name": "@jugyo/duex",
   "version": "0.1.0",
   "type": "module",
-  "description": "A tiny local-only durable workflow runtime backed by SQLite",
+  "description": "A small durable execution runtime for TypeScript, backed by SQLite",
   "license": "MIT",
   "author": "Kaz <kkohno@gmail.com>",
   "keywords": [
     "workflow",
     "durable",
+    "durable-execution",
     "sqlite",
-    "local",
-    "restate"
+    "local"
   ],
   "engines": {
     "node": ">=24.0.0"
@@ -29,12 +29,12 @@
     "README.md"
   ],
   "bin": {
-    "mini-restate": "./dist/bin/mini-restate.js"
+    "duex": "./dist/bin/duex.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
-    "mini-restate": "node ./bin/mini-restate.ts",
+    "duex": "node ./bin/duex.ts",
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

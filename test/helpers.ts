@@ -69,7 +69,7 @@ export function createTestRuntime(options: {
 
 /** Temporary directory removed when the test finishes. */
 export function tempDir(t: { after: (fn: () => void) => void }): string {
-  const directory = mkdtempSync(join(tmpdir(), "mini-restate-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "duex-test-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   return directory;
 }

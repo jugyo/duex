@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Runs `duex tick` once a minute without any resident process.
+
+  1. Edit the two absolute paths below (node binary and project directory).
+  2. cp examples/launchd/com.duex.tick.plist ~/Library/LaunchAgents/
+  3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.duex.tick.plist
+  4. launchctl kickstart -p gui/$(id -u)/com.duex.tick   # run once now
+
+  Unload with:
+     launchctl bootout gui/$(id -u)/com.duex.tick
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.duex.tick</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/ABSOLUTE/PATH/TO/duex/bin/duex.ts</string>
+    <string>tick</string>
+    <string>--max-runs</string>
+    <string>20</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/ABSOLUTE/PATH/TO/duex</string>
+
+  <key>StartInterval</key>
+  <integer>60</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/ABSOLUTE/PATH/TO/duex/.duex/tick.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/ABSOLUTE/PATH/TO/duex/.duex/tick.err.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>
