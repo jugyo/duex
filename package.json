@@ -5,6 +5,14 @@
   "description": "A small durable execution runtime for TypeScript, backed by SQLite",
   "license": "MIT",
   "author": "Kaz <kkohno@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jugyo/duex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jugyo/duex/issues"
+  },
+  "homepage": "https://github.com/jugyo/duex#readme",
   "keywords": [
     "workflow",
     "durable",
@@ -29,10 +37,14 @@
     "README.md"
   ],
   "bin": {
-    "duex": "./dist/bin/duex.js"
+    "duex": "dist/bin/duex.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
     "prepack": "npm run build",
     "duex": "node ./bin/duex.ts",
     "test": "node --test --experimental-strip-types test/*.test.ts",

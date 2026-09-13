@@ -16,15 +16,16 @@ Requires **Node.js 24+** (native TypeScript type stripping and `node:sqlite`).
 ## Quick start
 
 ```bash
-node bin/duex.ts init
-node bin/duex.ts invoke hello-workflow --input '{"name":"jugyo"}' --wait
-node bin/duex.ts journal show <INVOCATION_ID>
+npm install @jugyo/duex
+npx duex init
+npx duex invoke hello-workflow --input '{"name":"jugyo"}' --wait
+npx duex journal show <INVOCATION_ID>
 ```
 
 ## Writing a workflow
 
 ```ts
-import { defineWorkflow } from "./src/index.ts";
+import { defineWorkflow } from "@jugyo/duex";
 
 export const fishingAdvisor = defineWorkflow({
   name: "fishing-advisor",
@@ -46,7 +47,7 @@ export const fishingAdvisor = defineWorkflow({
 Register workflows in `duex.config.ts`:
 
 ```ts
-import { defineConfig } from "./src/config.ts";
+import { defineConfig } from "@jugyo/duex";
 
 export default defineConfig({
   dbPath: ".duex/state.sqlite",
