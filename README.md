@@ -97,18 +97,6 @@ curl -X POST http://127.0.0.1:8080/v1/workflows/fishing-advisor/invocations \
 Routes under `/v1/` cover workflows, invocations, journals, schedules, tick, doctor, and export.
 CLI and HTTP return the same view objects for a given record.
 
-## Running without a resident process
-
-```
-launchd ── every 60s ──► duex tick --max-runs 20
-```
-
-Each tick acquires the runner lease, materializes due schedules, recovers orphans,
-wakes timers, runs pending work, then exits. See
-[`examples/launchd/com.duex.tick.plist`](examples/launchd/com.duex.tick.plist).
-While the machine sleeps nothing runs; the first tick after wake applies the
-schedule's catch-up policy (`latest` by default, or `all` / `skip`).
-
 ## Guarantees
 
 - One invocation per idempotency key
