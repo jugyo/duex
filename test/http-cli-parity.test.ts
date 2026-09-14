@@ -19,7 +19,7 @@ import type { StartedHttpServer } from "../src/adapters/http.ts";
  */
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const CONFIG = join(ROOT, "duex.config.ts");
+const CONFIG = join(ROOT, "examples", "basic", "duex.config.ts");
 
 let directory: string;
 let dbPath: string;

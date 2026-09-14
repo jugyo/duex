@@ -120,7 +120,8 @@ import { defineWorkflow, defineConfig } from "@jugyo/duex";
 
 For a `file:` dependency, build this repo first (`npm install && npm run build`)
 so the symlink points at a populated `dist/`. In-repo development can run TypeScript
-directly via `npm run duex` (`node ./bin/duex.ts`).
+directly via `npm run duex` (`node ./bin/duex.ts`); a sample config lives in
+`examples/basic/` (`npm run duex -- --config examples/basic/duex.config.ts workflows list`).
 
 ## Develop
 

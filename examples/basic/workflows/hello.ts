@@ -1,5 +1,5 @@
-import { defineWorkflow } from "../core/types.ts";
-import type { WorkflowContext } from "../core/types.ts";
+import { defineWorkflow } from "../../../src/core/types.ts";
+import type { WorkflowContext } from "../../../src/core/types.ts";
 
 export interface HelloInput {
   name?: string;

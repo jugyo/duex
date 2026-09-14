@@ -1,9 +1,9 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import { TerminalError } from "../core/errors.ts";
-import { defineWorkflow } from "../core/types.ts";
-import type { Json, WorkflowContext } from "../core/types.ts";
+import { TerminalError } from "../../../src/core/errors.ts";
+import { defineWorkflow } from "../../../src/core/types.ts";
+import type { Json, WorkflowContext } from "../../../src/core/types.ts";
 
 /**
  * Acceptance application (design doc §17 Phase 7).

@@ -1,6 +1,6 @@
-import { defineConfig } from "./src/config.ts";
-import { fishingAdvisor } from "./src/workflows/fishing-advisor.ts";
-import { helloWorkflow } from "./src/workflows/hello.ts";
+import { defineConfig } from "../../src/config.ts";
+import { fishingAdvisor } from "./workflows/fishing-advisor.ts";
+import { helloWorkflow } from "./workflows/hello.ts";
 
 export default defineConfig({
   dbPath: ".duex/state.sqlite",

@@ -19,6 +19,6 @@
     "src/**/*.ts",
     "bin/**/*.ts",
     "test/**/*.ts",
-    "duex.config.ts"
+    "examples/**/*.ts"
   ]
 }
