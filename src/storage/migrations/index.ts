@@ -1,5 +1,11 @@
 /**
  * Forward-only migrations, applied in order and tracked with `PRAGMA user_version`.
+ *
+ * Published migrations already run against users' databases, so:
+ * - Never edit or delete a published migration.
+ * - Make every schema change by appending a migration with the next version.
+ * - Write SQL that succeeds on databases that already contain data
+ *   (e.g. new NOT NULL columns need a DEFAULT).
  */
 export interface Migration {
   version: number;

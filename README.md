@@ -109,6 +109,13 @@ dies after a side effect succeeds but before the journal commit, that step is
 retried. Derive an idempotency key from `ctx.invocationId` + step name and
 de-duplicate downstream.
 
+## Upgrading
+
+`init()` (and `duex init`) migrates the database to the schema of the installed
+version automatically. Migrations only move forward: once a newer version has
+migrated a database, older versions refuse to open it with `SCHEMA_TOO_NEW`.
+Back up `state.sqlite` before upgrading so you can roll back.
+
 ## Using as a package
 
 The published package ships compiled `dist/` (`.js` + `.d.ts`). Build with
