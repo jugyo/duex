@@ -53,7 +53,33 @@ export default defineConfig({
   dbPath: ".duex/state.sqlite",
   workflows: [helloWorkflow, fishingAdvisor],
   http: { host: "127.0.0.1", port: 8080, pollIntervalMs: 1000 },
-  runner: { leaseTtlMs: 60_000, maxRuns: 20 },
+  runner: { leaseTtlMs: 60_000, maxRuns: 20, concurrency: 1 },
+});
+```
+
+### Lanes and concurrency
+
+`tick` runs one invocation at a time by default. Raise `runner.concurrency` (or
+pass `--concurrency`) to run several at once, and give an invocation a `lane` at
+invoke time to serialize it against others: **at most one invocation per lane
+runs at a time, and different lanes run in parallel.** An invocation without a
+lane is unconstrained. A lane is mutual exclusion, not ordering: a `ctx.sleep`
+or retry wait frees the lane, so the next invocation of that lane may start
+before the earlier one finishes.
+
+```ts
+await runtime.invoke({ workflow: "poll-source", input, lane: "source:slack" });
+```
+
+A schedule carries a lane too, and hands it to every invocation it materializes,
+so a slot never overlaps the previous one while that run is still going.
+
+```ts
+runtime.createSchedule({
+  id: "poll-slack",
+  workflow: "poll-source",
+  every: "1m",
+  lane: "source:slack",
 });
 ```
 
@@ -73,9 +99,11 @@ Changing steps of a released workflow means bumping `version`.
 ```bash
 duex init
 duex invoke <workflow> --input '{"a":1}' --wait
-duex tick --max-runs 20
+duex invoke poll-source --input '{"pluginId":"slack"}' --lane source:slack
+duex tick --max-runs 20 --concurrency 4
 duex journal show <id>
 duex schedules create hourly-job --workflow fishing-advisor --every 1h
+duex schedules create poll-slack --workflow poll-source --every 1m --lane source:slack
 duex serve --host 127.0.0.1 --port 8080
 ```
 
@@ -102,7 +130,8 @@ CLI and HTTP return the same view objects for a given record.
 - One invocation per idempotency key
 - A step journaled as `completed` never runs again
 - Sleep, retry, and schedule times survive restarts
-- Only one runner executes handlers at a time (SQLite lease)
+- Only one runner process executes handlers at a time (SQLite lease)
+- Invocations that share a `lane` never run at the same time
 
 **Not** guaranteed: external side effects are **at-least-once**. If the process
 dies after a side effect succeeds but before the journal commit, that step is

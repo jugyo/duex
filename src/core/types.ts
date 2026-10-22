@@ -122,6 +122,8 @@ export interface InvocationRecord {
   status: InvocationStatus;
   availableAt: number;
   idempotencyKey: string | null;
+  /** Serialization key: at most one invocation per lane runs at a time. */
+  lane: string | null;
   scheduleId: string | null;
   scheduledAt: number | null;
   scheduledFrom: number | null;
@@ -151,6 +153,8 @@ export interface ScheduleRecord {
   id: string;
   workflowName: string;
   input: Json;
+  /** Lane handed to every invocation this schedule materializes. */
+  lane: string | null;
   everyMs: number;
   scheduleType: "interval" | "daily";
   dailyAt: string | null;

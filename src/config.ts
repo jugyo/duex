@@ -23,6 +23,8 @@ export interface DuexConfig {
   runner?: {
     leaseTtlMs?: number;
     maxRuns?: number;
+    /** Invocations run at once, across distinct lanes; `1` stays serial. */
+    concurrency?: number;
     defaultRetry?: RetryPolicy;
   };
   logLevel?: LogLevel;
@@ -146,6 +148,7 @@ export function createRuntime(
     now: options.now,
     ownerId: options.ownerId,
     leaseTtlMs: loaded.config.runner?.leaseTtlMs,
+    concurrency: loaded.config.runner?.concurrency,
     defaultRetry: loaded.config.runner?.defaultRetry,
   });
 

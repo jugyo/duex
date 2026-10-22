@@ -17,7 +17,12 @@ import { tempDir } from "./helpers.ts";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const BIN = join(ROOT, "bin", "duex.ts");
 const CONFIG = join(ROOT, "test", "fixtures", "crash-app", "duex.config.ts");
-const LEASE_TTL_MS = 300;
+/**
+ * Long enough that spawning the next `duex tick` cannot outlast the dead
+ * holder's lease, which the "only recoverable once the lease expires" step
+ * depends on. Shorter values race the process start under a loaded test run.
+ */
+const LEASE_TTL_MS = 1000;
 
 interface CliResult {
   code: number | null;

@@ -39,6 +39,7 @@ export interface JournalPatch {
 export interface SchedulePatch {
   workflowName?: string;
   input?: Json;
+  lane?: string | null;
   everyMs?: number;
   scheduleType?: ScheduleRecord["scheduleType"];
   dailyAt?: string | null;
@@ -82,7 +83,10 @@ export interface Store {
   updateInvocation(id: string, patch: InvocationPatch): void;
   /** Atomically move `pending` -> `running` when due. Returns false if lost. */
   claimInvocation(id: string, now: number): boolean;
+  /** Due `pending` rows, skipping lanes that already have a `running` row. */
   findRunnable(now: number, limit: number): InvocationRecord[];
+  /** True while any invocation of `lane` is `running`. */
+  hasRunningLane(lane: string): boolean;
   /** `sleeping`/`retry_wait` whose `available_at` has passed -> `pending`. */
   wakeDueInvocations(now: number): number;
   /** `running` rows left behind by a dead runner -> `pending`. */

@@ -57,6 +57,7 @@ function toInvocation(row: Row): InvocationRecord {
     status: text(row, "status") as InvocationStatus,
     availableAt: int(row, "available_at"),
     idempotencyKey: nullableText(row, "idempotency_key"),
+    lane: nullableText(row, "lane"),
     scheduleId: nullableText(row, "schedule_id"),
     scheduledAt: nullableInt(row, "scheduled_at"),
     scheduledFrom: nullableInt(row, "scheduled_from"),
@@ -89,6 +90,7 @@ function toSchedule(row: Row): ScheduleRecord {
     id: text(row, "id"),
     workflowName: text(row, "workflow_name"),
     input: decodePayload(text(row, "input_json")) as Json,
+    lane: nullableText(row, "lane"),
     everyMs: int(row, "every_ms"),
     scheduleType: text(row, "schedule_type") as "interval" | "daily",
     dailyAt: nullableText(row, "daily_at"),
@@ -212,9 +214,9 @@ export class SqliteStore implements Store {
       .prepare(
         `INSERT INTO invocations (
            id, workflow_name, workflow_version, status, available_at,
-           idempotency_key, schedule_id, scheduled_at, scheduled_from,
+           idempotency_key, lane, schedule_id, scheduled_at, scheduled_from,
            input_json, output_json, error_json, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
@@ -223,6 +225,7 @@ export class SqliteStore implements Store {
         record.status,
         record.availableAt,
         record.idempotencyKey,
+        record.lane,
         record.scheduleId,
         record.scheduledAt,
         record.scheduledFrom,
@@ -341,11 +344,23 @@ export class SqliteStore implements Store {
       .prepare(
         `SELECT * FROM invocations
          WHERE status = 'pending' AND available_at <= ?
+           AND (lane IS NULL OR lane NOT IN
+                (SELECT lane FROM invocations
+                 WHERE status = 'running' AND lane IS NOT NULL))
          ORDER BY available_at ASC, created_at ASC, id ASC
          LIMIT ?`,
       )
       .all(now, limit) as Row[];
     return rows.map(toInvocation);
+  }
+
+  hasRunningLane(lane: string): boolean {
+    const row = this.#db
+      .prepare(
+        "SELECT 1 FROM invocations WHERE status = 'running' AND lane = ? LIMIT 1",
+      )
+      .get(lane) as Row | undefined;
+    return row !== undefined;
   }
 
   wakeDueInvocations(now: number): number {
@@ -476,15 +491,16 @@ export class SqliteStore implements Store {
     this.#db
       .prepare(
         `INSERT INTO schedules (
-           id, workflow_name, input_json, every_ms, schedule_type, daily_at, timezone, next_run_at,
-           catch_up, max_catch_up, enabled, last_scheduled_at,
+           id, workflow_name, input_json, lane, every_ms, schedule_type, daily_at, timezone,
+           next_run_at, catch_up, max_catch_up, enabled, last_scheduled_at,
            created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
         record.workflowName,
         encodePayload(record.input, "schedule.input") ?? "null",
+        record.lane,
         record.everyMs,
         record.scheduleType,
         record.dailyAt,
@@ -535,6 +551,10 @@ export class SqliteStore implements Store {
     if (patch.input !== undefined) {
       assignments.push("input_json = ?");
       params.push(encodePayload(patch.input, "schedule.input") ?? "null");
+    }
+    if (patch.lane !== undefined) {
+      assignments.push("lane = ?");
+      params.push(patch.lane);
     }
     if (patch.everyMs !== undefined) {
       assignments.push("every_ms = ?");

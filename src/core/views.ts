@@ -20,6 +20,7 @@ export interface InvocationView {
   status: string;
   availableAt: string;
   idempotencyKey: string | null;
+  lane: string | null;
   scheduleId: string | null;
   scheduledAt: string | null;
   scheduledFrom: string | null;
@@ -50,6 +51,7 @@ export interface ScheduleView {
   id: string;
   workflow: string;
   input: Json;
+  lane: string | null;
   everyMs: number;
   scheduleType: string;
   dailyAt: string | null;
@@ -75,6 +77,7 @@ export function invocationView(record: InvocationRecord): InvocationView {
     status: record.status,
     availableAt: iso(record.availableAt)!,
     idempotencyKey: record.idempotencyKey,
+    lane: record.lane,
     scheduleId: record.scheduleId,
     scheduledAt: iso(record.scheduledAt),
     scheduledFrom: iso(record.scheduledFrom),
@@ -112,6 +115,7 @@ export function scheduleView(record: ScheduleRecord): ScheduleView {
     id: record.id,
     workflow: record.workflowName,
     input: record.input,
+    lane: record.lane,
     everyMs: record.everyMs,
     scheduleType: record.scheduleType,
     dailyAt: record.dailyAt,

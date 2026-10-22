@@ -43,10 +43,12 @@ const OPTIONS = {
   quiet: { type: "boolean", default: false },
   input: { type: "string" },
   "idempotency-key": { type: "string" },
+  lane: { type: "string" },
   wait: { type: "boolean", default: false },
   detach: { type: "boolean", default: false },
   timeout: { type: "string" },
   "max-runs": { type: "string" },
+  concurrency: { type: "string" },
   "no-schedules": { type: "boolean", default: false },
   status: { type: "string", multiple: true },
   workflow: { type: "string" },
@@ -105,9 +107,12 @@ Examples
   duex invoke fishing-advisor --input @input.json --wait
   duex invoke fishing-advisor --input '{"location":"Hakata Bay"}' \\
     --idempotency-key fishing-2026-08-31T10 --detach
-  duex tick --max-runs 20
+  duex invoke poll-source --input '{"pluginId":"slack"}' --lane source:slack
+  duex tick --max-runs 20 --concurrency 4
   duex schedules create hourly-fishing-advisor --workflow fishing-advisor \\
     --every 1h --input @config/fishing-input.json --catch-up latest
+  duex schedules create poll-slack --workflow poll-source --every 1m \\
+    --lane source:slack
   duex serve --host 127.0.0.1 --port 8080
 
 Exit codes
@@ -252,6 +257,7 @@ async function commandInvoke(
     workflow,
     input: readInput(values),
     idempotencyKey: optionalString(values, "idempotency-key") ?? null,
+    lane: optionalString(values, "lane") ?? null,
     wait: values.wait === true,
     waitTimeoutMs: values.timeout
       ? parseDuration(String(values.timeout))
@@ -300,6 +306,7 @@ async function commandTick(
 ): Promise<ExitCodeValue> {
   const result = await runtime.tick({
     maxRuns: values["max-runs"] ? intOption(values, "max-runs") : undefined,
+    concurrency: values.concurrency ? intOption(values, "concurrency") : undefined,
     schedules: values["no-schedules"] !== true,
   });
 
@@ -473,6 +480,7 @@ function commandSchedules(
         id,
         workflow,
         input: readInput(values),
+        lane: optionalString(values, "lane") ?? null,
         every,
         catchUp: optionalString(values, "catch-up") as CatchUpPolicy | undefined,
         maxCatchUp: values["max-catch-up"] ? intOption(values, "max-catch-up") : undefined,
@@ -748,6 +756,7 @@ function describeInvocation(view: ReturnType<typeof invocationView>): string {
     `updated:    ${view.updatedAt}`,
   ];
   if (view.idempotencyKey) lines.push(`idempotency: ${view.idempotencyKey}`);
+  if (view.lane) lines.push(`lane:       ${view.lane}`);
   if (view.scheduleId) {
     lines.push(`schedule:   ${view.scheduleId} @ ${view.scheduledAt}`);
   }

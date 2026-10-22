@@ -98,6 +98,7 @@ export class ScheduleMaterializer {
             status: "pending",
             availableAt: scheduledAt,
             idempotencyKey,
+            lane: schedule.lane,
             scheduleId: schedule.id,
             scheduledAt,
             scheduledFrom: schedule.scheduleType === "daily"

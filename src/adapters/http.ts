@@ -173,12 +173,14 @@ function buildRoutes(runtime: RuntimeApi): Route[] {
         context.header("idempotency-key") ??
         context.url.searchParams.get("idempotencyKey") ??
         null;
+      const lane = context.url.searchParams.get("lane");
       const wait = boolParam(context.url.searchParams.get("wait"));
 
       const result = await runtime.invoke({
         workflow: context.params.name,
         input: body,
         idempotencyKey,
+        lane,
         wait,
         waitTimeoutMs: intParam(context.url.searchParams.get("waitTimeoutMs")) ?? undefined,
       });
@@ -252,6 +254,7 @@ function buildRoutes(runtime: RuntimeApi): Route[] {
         id: String(body.id ?? ""),
         workflow: String(body.workflow ?? ""),
         input: body.input ?? null,
+        lane: (body.lane as string | null | undefined) ?? null,
         every: (body.every as string | number) ?? 0,
         catchUp: (body.catchUp as CatchUpPolicy | undefined) ?? undefined,
         maxCatchUp: (body.maxCatchUp as number | undefined) ?? undefined,
@@ -291,6 +294,10 @@ function buildRoutes(runtime: RuntimeApi): Route[] {
         maxRuns:
           (body?.maxRuns as number | undefined) ??
           intParam(context.url.searchParams.get("maxRuns")) ??
+          undefined,
+        concurrency:
+          (body?.concurrency as number | undefined) ??
+          intParam(context.url.searchParams.get("concurrency")) ??
           undefined,
       });
       return { status: 200, body: result as unknown as Json };

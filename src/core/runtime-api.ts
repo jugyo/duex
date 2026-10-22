@@ -39,13 +39,20 @@ export interface RuntimeApiOptions {
   ownerId?: string;
   leaseTtlMs?: number;
   defaultRetry?: RetryPolicy;
+  /** Default `tick` concurrency; `1` keeps the runner strictly serial. */
+  concurrency?: number;
 }
 
 export interface InvokeRequest {
   workflow: string;
   input?: unknown;
   idempotencyKey?: string | null;
-  /** Run the invocation inline until it completes, fails or suspends. */
+  /** Serialization key; invocations sharing a lane never run concurrently. */
+  lane?: string | null;
+  /**
+   * Run the invocation inline until it completes, fails or suspends. A `lane`
+   * that is already running elsewhere leaves the invocation pending instead.
+   */
   wait?: boolean;
   /** Upper bound for `wait`; a longer sleep/backoff returns early. */
   waitTimeoutMs?: number;
@@ -61,6 +68,8 @@ export interface InvokeResult {
 
 export interface TickOptions {
   maxRuns?: number;
+  /** Invocations started at once, across distinct lanes (default 1). */
+  concurrency?: number;
   /** Stop starting new invocations after this instant. */
   deadlineMs?: number;
   /** Materialize due schedules before running (default true). */
@@ -89,6 +98,8 @@ export interface CreateScheduleRequest {
   id: string;
   workflow: string;
   input?: unknown;
+  /** Lane handed to every invocation this schedule materializes. */
+  lane?: string | null;
   every: Duration;
   catchUp?: CatchUpPolicy;
   maxCatchUp?: number;
@@ -100,6 +111,8 @@ export interface CreateDailyScheduleRequest {
   id: string;
   workflow: string;
   input?: unknown;
+  /** Lane handed to every invocation this schedule materializes. */
+  lane?: string | null;
   dailyAt: string;
   timezone: string;
   catchUp?: CatchUpPolicy;
@@ -120,6 +133,13 @@ export interface DoctorReport {
 }
 
 const CATCH_UP_POLICIES: CatchUpPolicy[] = ["latest", "all", "skip"];
+
+function assertLane(lane: string | null): string | null {
+  if (lane !== null && lane.trim() === "") {
+    throw new UsageError("lane must not be empty");
+  }
+  return lane;
+}
 
 const VALID_STATUSES: InvocationStatus[] = [
   "pending",
@@ -145,6 +165,7 @@ export class RuntimeApi {
   #logger: Logger;
   #now: () => number;
   #leaseTtlMs: number;
+  #concurrency: number;
   #runner: InvocationRunner;
   #materializer: ScheduleMaterializer;
   #lease: RunnerLease | null = null;
@@ -156,6 +177,7 @@ export class RuntimeApi {
     this.#now = options.now ?? Date.now;
     this.ownerId = options.ownerId ?? newOwnerId();
     this.#leaseTtlMs = options.leaseTtlMs ?? 60_000;
+    this.#concurrency = options.concurrency ?? 1;
     this.#runner = new InvocationRunner({
       store: this.store,
       registry: this.registry,
@@ -216,12 +238,14 @@ export class RuntimeApi {
     if (idempotencyKey !== null && idempotencyKey.trim() === "") {
       throw new UsageError("idempotency key must not be empty");
     }
+    const lane = assertLane(request.lane ?? null);
 
     const { invocation, created } = this.#enqueue(
       workflow.name,
       workflow.version,
       input,
       idempotencyKey,
+      lane,
     );
 
     if (!request.wait) {
@@ -254,6 +278,7 @@ export class RuntimeApi {
     workflowVersion: string,
     input: Json,
     idempotencyKey: string | null,
+    lane: string | null,
   ): { invocation: InvocationRecord; created: boolean } {
     return this.store.transaction(() => {
       if (idempotencyKey !== null) {
@@ -272,6 +297,7 @@ export class RuntimeApi {
         status: "pending",
         availableAt: now,
         idempotencyKey,
+        lane,
         scheduleId: null,
         scheduledAt: null,
         scheduledFrom: null,
@@ -300,6 +326,7 @@ export class RuntimeApi {
         workflow: workflowName,
         workflowVersion,
         idempotencyKey,
+        lane,
       });
       return { invocation: record, created: true };
     });
@@ -329,6 +356,11 @@ export class RuntimeApi {
 
       const refreshed = this.store.getInvocation(id)!;
       if (refreshed.status !== "pending") return { invocation: refreshed, ran, outcome };
+      // A tick may be running the lane already: `withRunnerLease` is re-entrant
+      // inside one instance, so holding the lease is not exclusive enough here.
+      if (refreshed.lane && this.store.hasRunningLane(refreshed.lane)) {
+        return { invocation: refreshed, ran, outcome };
+      }
 
       const result = await this.#runner.run(id);
       ran = ran || result.outcome !== "skipped";
@@ -421,6 +453,10 @@ export class RuntimeApi {
   async tick(options: TickOptions = {}): Promise<TickResult> {
     const maxRuns = options.maxRuns ?? 20;
     if (maxRuns < 0) throw new UsageError("--max-runs must be >= 0");
+    const concurrency = options.concurrency ?? this.#concurrency;
+    if (!Number.isInteger(concurrency) || concurrency < 1) {
+      throw new UsageError("--concurrency must be an integer >= 1");
+    }
 
     const result = await this.withRunnerLease(async (acquired) => {
       if (!acquired) {
@@ -447,24 +483,73 @@ export class RuntimeApi {
       let woken = this.store.wakeDueInvocations(this.#now());
 
       const runs: TickResult["runs"] = [];
-      while (runs.length < maxRuns) {
+      // `findRunnable` already hides lanes with a `running` row, but one query
+      // can return several rows of the same lane, so `lanes` tracks what this
+      // tick started and keeps those lanes serial too.
+      const inflight = new Map<string, Promise<void>>();
+      const lanes = new Set<string>();
+      const failures: unknown[] = [];
+      let started = 0;
+
+      const start = (invocation: InvocationRecord): void => {
+        started += 1;
+        if (invocation.lane) lanes.add(invocation.lane);
+        // Never rejects: one failing invocation must not abandon the others.
+        const settled = (async () => {
+          try {
+            runs.push(this.#summarize(await this.#runner.run(invocation.id)));
+          } catch (error) {
+            failures.push(error);
+          } finally {
+            inflight.delete(invocation.id);
+            if (invocation.lane) lanes.delete(invocation.lane);
+          }
+        })();
+        inflight.set(invocation.id, settled);
+      };
+
+      const takeRunnable = (): InvocationRecord[] =>
+        this.store.findRunnable(this.#now(), concurrency - inflight.size);
+
+      while (started < maxRuns) {
         if (options.deadlineMs !== undefined && this.#now() >= options.deadlineMs) break;
         if (this.#lease && !this.#lease.renew()) {
-          // Another runner took over; stop before starting more work.
+          // Another runner took over; stop before starting more work. The
+          // in-flight runs below are still awaited, so they can overlap the new
+          // owner's `recoverOrphanedRunning` and be re-queued while running.
           this.#logger.warn("tick.lease_lost", { owner: this.ownerId });
           break;
         }
 
-        const [next] = this.store.findRunnable(this.#now(), 1);
-        if (!next) {
+        let next = inflight.size < concurrency ? takeRunnable() : [];
+        if (next.length === 0) {
+          if (inflight.size > 0) {
+            // A lane may free up, or new work may be due, once one run returns.
+            await Promise.race(inflight.values());
+            continue;
+          }
           woken += this.store.wakeDueInvocations(this.#now());
-          const [retryNext] = this.store.findRunnable(this.#now(), 1);
-          if (!retryNext) break;
-          runs.push(this.#summarize(await this.#runner.run(retryNext.id)));
-          continue;
+          next = takeRunnable();
+          if (next.length === 0) break;
         }
-        runs.push(this.#summarize(await this.#runner.run(next.id)));
+
+        const before = started;
+        for (const invocation of next) {
+          if (started >= maxRuns) break;
+          if (invocation.lane && lanes.has(invocation.lane)) continue;
+          start(invocation);
+        }
+        if (started === before) {
+          // Everything on offer belongs to a lane this tick is already running.
+          if (inflight.size === 0) break;
+          await Promise.race(inflight.values());
+        } else if (inflight.size >= concurrency) {
+          await Promise.race(inflight.values());
+        }
       }
+
+      await Promise.all(inflight.values());
+      if (failures.length > 0) throw failures[0];
 
       return {
         ran: true,
@@ -550,6 +635,7 @@ export class RuntimeApi {
       id: request.id,
       workflowName: workflow.name,
       input: assertJson(request.input ?? null, "schedule.input"),
+      lane: assertLane(request.lane ?? null),
       everyMs,
       scheduleType: "interval",
       dailyAt: null,
@@ -607,6 +693,7 @@ export class RuntimeApi {
       id: request.id,
       workflowName: workflow.name,
       input: assertJson(request.input ?? null, "schedule.input"),
+      lane: assertLane(request.lane ?? null),
       everyMs: 86_400_000,
       scheduleType: "daily",
       dailyAt: request.dailyAt,

@@ -97,6 +97,23 @@ ALTER TABLE schedules ADD COLUMN timezone TEXT;
 ALTER TABLE invocations ADD COLUMN scheduled_from INTEGER;
 `,
   },
+  {
+    version: 4,
+    name: "invocation-lanes",
+    sql: `
+ALTER TABLE invocations ADD COLUMN lane TEXT;
+
+CREATE INDEX idx_invocations_lane
+  ON invocations(status, lane);
+`,
+  },
+  {
+    version: 5,
+    name: "schedule-lanes",
+    sql: `
+ALTER TABLE schedules ADD COLUMN lane TEXT;
+`,
+  },
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

@@ -65,6 +65,7 @@ describe("migrations", () => {
       assert.equal(invocation.status, "completed");
       assert.equal(invocation.idempotencyKey, "key-1");
       assert.equal(invocation.scheduledFrom, T0 - 3_600_000);
+      assert.equal(invocation.lane, null);
       assert.deepEqual(invocation.input, { name: "jugyo" });
       assert.deepEqual(invocation.output, { greeting: "hi" });
 
