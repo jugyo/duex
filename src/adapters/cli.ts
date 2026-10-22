@@ -70,7 +70,7 @@ const OPTIONS = {
 
 type CliValues = Record<string, string | string[] | boolean | undefined>;
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 const USAGE = `duex ${VERSION} — a local durable workflow runtime
 
